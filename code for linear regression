@@ -1,0 +1,41 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+# Load the dataset
+bitcoin_data = pd.read_csv('/content/drive/MyDrive/GOOG.csv')
+
+# Handle missing values if any
+bitcoin_data.dropna(inplace=True)
+
+# Convert 'Date' column to datetime
+bitcoin_data['date'] = pd.to_datetime(bitcoin_data['date'])
+
+# Sort the data by date
+bitcoin_data.sort_values('date', inplace=True)
+bitcoin_data.reset_index(drop=True, inplace=True)
+
+# Add a column for the number of days since the first recorded date
+bitcoin_data['Days'] = (bitcoin_data['date'] - bitcoin_data['date'].iloc[0]).dt.days
+
+# Considering only 'Days' and 'Close' columns for simplicity
+bitcoin_data = bitcoin_data[['Days', 'close']]
+X_train, X_test, y_train, y_test = train_test_split(bitcoin_data[['Days']], bitcoin_data['close'], test_size=0.2, random_state=42)
+# Train the linear regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+def custom_accuracy(y_true, y_pred, threshold_percent):
+    error_margin = threshold_percent / 100 * y_true
+    lower_bound = y_true - error_margin
+    upper_bound = y_true + error_margin
+    correct_predictions = np.sum((y_pred >= lower_bound) & (y_pred <= upper_bound))
+    total_predictions = len(y_true)
+    accuracy = correct_predictions / total_predictions
+    return accuracy
+threshold_percent = 20  # Adjust the percentage as needed
+accuracy = custom_accuracy(y_test.values, y_pred, threshold_percent)
+print("Custom Accuracy (within {}%): {:.2f}%".format(threshold_percent, accuracy * 100))
